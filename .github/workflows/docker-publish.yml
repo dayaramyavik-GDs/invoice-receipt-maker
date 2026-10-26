@@ -21,8 +21,8 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          # GHCR names must be lowercase – replace with your lowercase username if needed
-          images: ghcr.io/${{ github.repository_owner }}/invoice-receipt-maker-api
+          # GHCR names must be lowercase (the GitHub account is dayaramyavik-GDs)
+          images: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api
           tags: |
             type=semver,pattern={{version}}
             type=sha

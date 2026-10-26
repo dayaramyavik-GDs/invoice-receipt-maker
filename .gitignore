@@ -47,3 +47,6 @@ docker-compose.override.yml
 *.iml
 .DS_Store
 Thumbs.db
+
+# ---------- Local k3s cluster kubeconfig ----------
+.k3s/

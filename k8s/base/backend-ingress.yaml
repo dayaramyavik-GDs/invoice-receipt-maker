@@ -1,0 +1,19 @@
+# Routes HTTP traffic from the Traefik ingress controller to the API on any hostname.
+# The production overlay (k8s/production) adds your domain and an HTTPS certificate.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: invoice-api
+  namespace: invoice-maker
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: invoice-api
+                port:
+                  number: 80

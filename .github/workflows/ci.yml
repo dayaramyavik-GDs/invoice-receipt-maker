@@ -61,8 +61,9 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
       - name: Render and validate manifests
         run: |
-          kubectl kustomize k8s/ > rendered.yaml
-          kubeconform -strict -summary -ignore-missing-schemas rendered.yaml k8s/cluster-issuer.yaml k8s/local/*.yaml
+          kubectl kustomize k8s/base > rendered.yaml
+          kubectl kustomize k8s/production > rendered-prod.yaml
+          kubeconform -strict -summary -ignore-missing-schemas rendered.yaml rendered-prod.yaml k8s/local/*.yaml
 
   snyk:
     runs-on: ubuntu-latest

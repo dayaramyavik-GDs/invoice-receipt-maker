@@ -21,6 +21,7 @@ spec:
       labels:
         app: invoice-api
     spec:
+      terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000            # the "node" user in the official image
@@ -28,11 +29,15 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/your-github-username/invoice-receipt-maker-api:0.1.0
+          image: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api:0.1.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3000
+          lifecycle:
+            preStop:               # keep serving while the ingress stops sending traffic here, then SIGTERM
+              exec:
+                command: ["sleep", "10"]
           envFrom:
             - configMapRef:
                 name: invoice-api-config

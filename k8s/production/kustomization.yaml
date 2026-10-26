@@ -1,0 +1,10 @@
+# Production overlay: the base manifests + HTTPS on your own domain.
+# Before deploying, set your hostname in ingress-tls.yaml (both places) and your email in cluster-issuer.yaml.
+# Deploy with: kubectl apply -k k8s/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - cluster-issuer.yaml
+patches:
+  - path: ingress-tls.yaml
