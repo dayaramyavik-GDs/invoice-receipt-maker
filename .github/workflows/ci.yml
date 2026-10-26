@@ -1,0 +1,80 @@
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Dependency audit (fail on high/critical in production deps)
+        run: npm audit --omit=dev --audit-level=high
+
+  mobile-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run pure-JS tests (money maths etc.)
+        working-directory: mobile-client
+        run: node --test "tests/**/*.test.mjs"
+
+  docker-build:
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: production
+          push: false
+          tags: invoice-api:ci
+
+  k8s-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      - name: Render and validate manifests
+        run: |
+          kubectl kustomize k8s/ > rendered.yaml
+          kubeconform -strict -summary -ignore-missing-schemas rendered.yaml k8s/cluster-issuer.yaml k8s/local/*.yaml
+
+  snyk:
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: backend
+      - name: Snyk dependency scan (skipped until the SNYK_TOKEN secret is set)
+        if: env.SNYK_TOKEN != ''
+        run: npx snyk test --file=backend/package.json --severity-threshold=high

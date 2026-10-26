@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoice-api
+  namespace: invoice-maker
+  labels:
+    app: invoice-api
+spec:
+  replicas: 2                      # 2 = survives one pod/node failure; the HPA can raise it
+  revisionHistoryLimit: 5          # keeps old ReplicaSets for `rollout undo`
+  selector:
+    matchLabels:
+      app: invoice-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                  # start 1 new pod first…
+      maxUnavailable: 0            # …and never drop below the desired count
+  template:
+    metadata:
+      labels:
+        app: invoice-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000            # the "node" user in the official image
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/your-github-username/invoice-receipt-maker-api:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: invoice-api-config
+            - secretRef:
+                name: invoice-api-secrets
+          readinessProbe:          # "can this pod take traffic?" (checks the DB connection)
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:           # "is the process stuck?" (restart if failing)
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:              # guaranteed share – used for scheduling and HPA %
+              cpu: 100m
+              memory: 128Mi
+            limits:                # hard ceiling
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invoice-api-config
+  namespace: invoice-maker
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  JWT_ACCESS_TTL: "15m"
+  JWT_REFRESH_TTL: "30d"
+  BCRYPT_ROUNDS: "12"
+  CORS_ORIGINS: "https://localhost"

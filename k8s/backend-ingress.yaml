@@ -1,0 +1,26 @@
+# Public HTTPS entry point. Replace api.example.com (both places) with your hostname,
+# e.g. api.yourdomain.com or api.203-0-113-10.sslip.io
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: invoice-api
+  namespace: invoice-maker
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.example.com
+      secretName: invoice-api-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: invoice-api
+                port:
+                  number: 80
