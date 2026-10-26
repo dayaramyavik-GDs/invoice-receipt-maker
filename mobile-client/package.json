@@ -1,7 +1,7 @@
 {
   "name": "invoice-maker-mobile",
   "displayName": "Invoice Maker",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Offline-first invoice and receipt maker (Cordova)",
   "scripts": {
     "postinstall": "node scripts/copy-libs.mjs",

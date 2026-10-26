@@ -9,4 +9,4 @@ resources:
   - backend-hpa.yaml
 images:
   - name: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api
-    newTag: "0.1.1"               # change this to roll out a new version
+    newTag: "0.1.2"               # change this to roll out a new version

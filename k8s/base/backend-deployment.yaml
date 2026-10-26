@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api:0.1.1
+          image: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api:0.1.2
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
