@@ -28,12 +28,19 @@ Devices used: Pixel 9 Pro Fold (Android 17, current WebView) and an Android 15 e
 | OF-7 | PDF generated on the phone is correct (pulled from the app cache and inspected) | ✅ |
 | OF-8 | Data survives force-stop + app update in airplane mode | ✅ |
 | OF-9 | Offline-only build (no API URL): sign-in hidden, settings explain it, everything else works | ✅ |
+| OF-10 | Delete a draft invoice → removed, deletion syncs to the other device | ✅ |
+| OF-11 | Void an issued invoice via the native Android confirm dialog → locked, no Save, still shareable, moves to the "void" filter, leaves the outstanding total | ✅ |
+| OF-12 | Delete a customer who has invoices → invoices keep the customer's name and address; editing such an invoice shows "(deleted customer)" and saves | ✅ |
+| OF-13 | Delete a saved item | ✅ |
 
 Found and fixed on the real devices:
 - a blank band under the status bar (safe-area inset applied twice)
 - line labels detached from their inputs
 - the floating + button covering the last button
 - a new screen opening part-way down because the previous screen's scroll position was kept
+- newer WebViews report a safe-area inset although Cordova already offsets the WebView, so CSS safe-area
+  padding was removed
+- editing an invoice whose customer had been deleted showed an empty customer and could not be saved
 
 ## Sync between two real devices (phone + emulator, API in Docker via `adb reverse`)
 

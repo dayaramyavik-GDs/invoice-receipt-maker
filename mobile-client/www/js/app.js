@@ -159,6 +159,8 @@ async function renderEditor(id, type = 'invoice') {
   if (!doc) { view.innerHTML = '<p class="empty">This document no longer exists.</p>'; return; }
   const isInvoice = doc.type === 'invoice';
   const locked = doc.status === 'void';
+  // If this document's customer was deleted later, keep showing (and saving) the copy stored on the document.
+  const deletedCustomer = doc.customerId && doc.customer && !customers.some((c) => c.id === doc.customerId);
   setTitle(doc.number || `New ${doc.type}`);
 
   view.innerHTML = `
@@ -167,6 +169,7 @@ async function renderEditor(id, type = 'invoice') {
       <label>${isInvoice ? 'Customer *' : 'Customer (optional)'}
         <select name="customerId">
           <option value="">${isInvoice ? 'Select a customer…' : 'Walk-in customer'}</option>
+          ${deletedCustomer ? `<option value="${doc.customerId}" selected>${esc(doc.customer.name)} (deleted customer)</option>` : ''}
           ${customers.map((c) => `<option value="${c.id}" ${c.id === doc.customerId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>
       </label>
@@ -285,7 +288,9 @@ async function renderEditor(id, type = 'invoice') {
     try {
       const c = customers.find((x) => x.id === doc.customerId);
       // Snapshot so old PDFs stay accurate if the customer's details change later.
-      doc.customer = c ? { name: c.name, email: c.email, phone: c.phone, address: c.address } : null;
+      // A deleted customer has no record any more, so the existing snapshot is kept.
+      if (c) doc.customer = { name: c.name, email: c.email, phone: c.phone, address: c.address };
+      else if (!(deletedCustomer && doc.customerId)) doc.customer = null;
       recalc();
       if (issuing && doc.status === 'draft') {
         doc.status = 'issued';
