@@ -1,0 +1,49 @@
+# ---------- Dependencies ----------
+node_modules/
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*
+logs/
+
+# ---------- Environment & secrets ----------
+.env
+.env.*
+!.env.example
+k8s/secrets/
+secret.yaml
+build.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# ---------- Cordova (generated – recreated by `cordova prepare`) ----------
+mobile-client/platforms/
+mobile-client/plugins/
+mobile-client/www/lib/
+
+# ---------- Android build outputs ----------
+*.apk
+*.aab
+.gradle/
+local.properties
+captures/
+
+# ---------- Tests / coverage ----------
+coverage/
+
+# ---------- Docker ----------
+docker-compose.override.yml
+
+# ---------- IDE / OS ----------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

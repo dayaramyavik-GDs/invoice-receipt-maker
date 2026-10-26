@@ -1,0 +1,53 @@
+name: invoice-maker
+
+services:
+  api:
+    build:
+      context: ./backend
+      target: dev
+    env_file: ./backend/.env
+    environment:
+      # Overrides the value in backend/.env so the API talks to the "mongo" container
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/invoice_maker?authSource=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    develop:
+      watch:
+        - action: sync          # copies edited files into the container; node --watch restarts
+          path: ./backend/src
+          target: /app/src
+        - action: rebuild       # new dependency → rebuild image
+          path: ./backend/package.json
+
+  mongo:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"   # reachable only from your PC (e.g. MongoDB Compass)
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  mongo-data:
+
+networks:
+  backend:

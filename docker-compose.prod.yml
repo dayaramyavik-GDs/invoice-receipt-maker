@@ -1,0 +1,11 @@
+# Runs the production image locally against MongoDB Atlas.
+# Usage: docker compose -f docker-compose.prod.yml up --build
+services:
+  api:
+    build:
+      context: ./backend
+      target: production
+    env_file: ./backend/.env.production   # gitignored; points to Atlas
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
