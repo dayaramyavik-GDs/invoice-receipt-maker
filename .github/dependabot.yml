@@ -1,14 +1,25 @@
+# Dependency updates: monthly, with minor/patch bumps bundled into one PR per ecosystem.
+# Major upgrades still arrive as separate PRs so a breaking change is never hidden in a bundle.
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /backend
-    schedule: { interval: weekly }
-  - package-ecosystem: npm
-    directory: /mobile-client
-    schedule: { interval: weekly }
+    directories: [/backend, /mobile-client]
+    schedule: { interval: monthly }
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
   - package-ecosystem: docker
     directory: /backend
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    ignore:
+      # Stay on Node 24 LTS; moving to a new Node major is a deliberate upgrade.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
