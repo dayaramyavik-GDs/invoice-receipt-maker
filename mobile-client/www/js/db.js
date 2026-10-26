@@ -31,6 +31,8 @@ const MIGRATIONS = [
     `CREATE TABLE conflicts (id TEXT PRIMARY KEY, entity TEXT NOT NULL, record_id TEXT NOT NULL,
        local_data TEXT, server_data TEXT, created_at TEXT NOT NULL)`,
   ],
+  // v2: last-synced copy of each record, the "base" for three-way conflict merges
+  ['business_profile', 'customers', 'items', 'documents'].map((t) => `ALTER TABLE ${t} ADD COLUMN synced_data TEXT`),
 ];
 
 export function openDb() {

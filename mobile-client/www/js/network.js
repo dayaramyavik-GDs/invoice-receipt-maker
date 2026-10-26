@@ -28,7 +28,7 @@ export async function fetchWithTimeout(url, options = {}, ms = CONFIG.REQUEST_TI
 
 // "Connected to Wi-Fi" is not the same as "can reach our server".
 export async function canReachServer() {
-  if (!navigator.onLine) return false;
+  if (!navigator.onLine || !CONFIG.API_ORIGIN) return false;
   try {
     return (await fetchWithTimeout(`${CONFIG.API_ORIGIN}/health/live`, {}, 5000)).ok;
   } catch {

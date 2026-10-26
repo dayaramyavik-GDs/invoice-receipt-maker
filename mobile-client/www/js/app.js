@@ -6,6 +6,7 @@ import { buildPdf, sharePdf } from './pdf.js';
 import { shareFile } from './share.js';
 import { startSync, syncNow } from './sync.js';
 import { isLoggedIn, login, register, logout, deleteAccount } from './api.js';
+import { CONFIG } from './config.js';
 
 const view = document.getElementById('view');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,11 +48,15 @@ const routes = {
   '/conflicts': renderConflicts,
 };
 
+let lastRoute = null;
 async function router() {
-  const [path, qs] = (location.hash.slice(1) || '/dashboard').split('?');
+  const route = location.hash.slice(1) || '/dashboard';
+  const [path, qs] = route.split('?');
   document.querySelectorAll('.tabbar a').forEach((a) => a.classList.toggle('active', path.startsWith(a.hash.slice(1))));
   try {
     await (routes[path] || renderDashboard)(new URLSearchParams(qs));
+    if (route !== lastRoute) window.scrollTo(0, 0);   // a new screen starts at the top; refreshes keep their place
+    lastRoute = route;
   } catch (e) {
     showError(e);
   }
@@ -173,7 +178,6 @@ async function renderEditor(id, type = 'invoice') {
             `<option value="${m}">${m.replace('-', ' ')}</option>`).join('')}</select></label>` : ''}
       </div>
       <h2>Items</h2>
-      <div class="line-labels"><span>Qty</span><span>Unit price (£)</span><span>Tax %</span><span></span></div>
       <div id="lines"></div>
       <div class="row">
         <button type="button" id="add-line" class="secondary">+ Add line</button>
@@ -220,9 +224,9 @@ async function renderEditor(id, type = 'invoice') {
     linesEl.innerHTML = doc.lines.map((l, i) => `
       <fieldset class="line" data-i="${i}" ${locked ? 'disabled' : ''}>
         <input name="description" placeholder="Description, e.g. Deep clean – 3 bed house" value="${esc(l.description)}" maxlength="500" aria-label="Description">
-        <input name="quantity" type="number" inputmode="decimal" min="0" step="0.01" value="${l.quantity}" aria-label="Quantity">
-        <input name="unitPrice" type="number" inputmode="decimal" min="0" step="0.01" value="${(l.unitPricePence / 100).toFixed(2)}" aria-label="Unit price">
-        <input name="taxRatePercent" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="${l.taxRatePercent}" aria-label="Tax %">
+        <label class="mini">Qty<input name="quantity" type="number" inputmode="decimal" min="0" step="0.01" value="${l.quantity}"></label>
+        <label class="mini">Unit price (£)<input name="unitPrice" type="number" inputmode="decimal" min="0" step="0.01" value="${(l.unitPricePence / 100).toFixed(2)}"></label>
+        <label class="mini">Tax %<input name="taxRatePercent" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="${l.taxRatePercent}"></label>
         <button type="button" class="remove secondary" aria-label="Remove line">✕</button>
       </fieldset>`).join('');
     drawTotals();
@@ -440,7 +444,8 @@ async function renderSettings(onboarding) {
   const loggedIn = await isLoggedIn();
   setTitle(onboarding ? 'Welcome' : 'Settings');
   view.innerHTML = `
-    ${onboarding ? '<p>Add your business details once – they appear on every invoice. You can change them later. No account or internet needed.</p>' : ''}
+    ${onboarding ? `<p>Add your business details once – they appear on every invoice. You can change them later. No account or internet needed.</p>
+      ${CONFIG.API_ORIGIN ? '<p><a href="#/login">Already use Invoice Maker on another phone? Sign in</a></p>' : ''}` : ''}
     <form id="profile-form" novalidate>
       <label>Business name * <input name="businessName" required maxlength="120" value="${esc(p.businessName)}"></label>
       <label>Address <textarea name="address" maxlength="500">${esc(p.address)}</textarea></label>
@@ -468,7 +473,8 @@ async function renderSettings(onboarding) {
       <button id="export" class="secondary">Export backup</button></div>
     <h2>Cloud backup (optional)</h2>
     <div class="card">
-      ${loggedIn
+      ${!CONFIG.API_ORIGIN ? '<p class="muted">Cloud backup isn\'t set up in this version of the app. Everything works on this phone; use Export backup to keep a copy.</p>'
+        : loggedIn
         ? `<p>Signed in as ${esc(await getMeta('user_email'))}</p>
            <div class="actions"><button id="sync-now">Sync now</button><button id="logout" class="secondary">Sign out</button></div>
            <button id="delete-account" class="danger">Delete cloud account</button>`
@@ -533,6 +539,7 @@ async function renderSettings(onboarding) {
 // ---------- Login (online feature) ----------
 function renderLogin() {
   setTitle('Cloud backup');
+  if (!CONFIG.API_ORIGIN) { view.innerHTML = '<p class="empty">Cloud backup isn\'t set up in this version of the app.</p>'; return; }
   view.innerHTML = `
     <p class="muted">Your invoices already work offline. An account adds backup and lets you use a second phone.</p>
     <form id="login-form" novalidate>
@@ -556,9 +563,10 @@ function renderLogin() {
     buttons.forEach((b) => { b.disabled = true; });
     try {
       await (e.submitter?.value === 'register' ? register(email, password) : login(email, password));
-      toast('Signed in – backing up your data');
-      syncNow();
-      go('#/settings');
+      toast('Signed in – syncing your data');
+      await syncNow();
+      // A new phone gets its business profile from the first pull, so skip setup if it arrived.
+      go((await repo.getProfile()).businessName ? '#/dashboard' : '#/onboarding');
     } catch (err) {
       showFormError(form, [err.message]);
     } finally {

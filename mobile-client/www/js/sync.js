@@ -24,7 +24,7 @@ export function scheduleSync(delay = 3000) {
 }
 
 export async function syncNow() {
-  if (running || !(await isLoggedIn())) return;
+  if (running || !CONFIG.API_ORIGIN || !(await isLoggedIn())) return;
   running = true;
   const reachable = await canReachServer();
   if (!reachable && !navigator.onLine) {
@@ -59,7 +59,7 @@ async function push() {
       const [row] = await query(`SELECT * FROM ${ENTITIES[q.entity].table} WHERE id = ?`, [q.record_id]);
       if (!row) { await query('DELETE FROM outbox WHERE entity = ? AND record_id = ?', [q.entity, q.record_id]); continue; }
       const rec = rowToRecord(row);
-      locals.set(q.op_id, { q, rec });
+      locals.set(q.op_id, { q, rec, base: row.synced_data ? JSON.parse(row.synced_data) : null });
       changes.push({ opId: q.op_id, entity: q.entity, id: rec.id, baseVersion: rec.version || 0,
         updatedAt: rec.updatedAt, deletedAt: rec.deletedAt || null, data: stripMeta(rec) });
     }
@@ -67,15 +67,17 @@ async function push() {
 
     const { results } = await authed('/sync/push', { method: 'POST', body: { changes } });
     for (const r of results) {
-      const { q, rec } = locals.get(r.opId);
+      const { q, rec, base } = locals.get(r.opId);
       if (r.status === 'applied' || r.status === 'duplicate') {
         await batch([
-          [`UPDATE ${ENTITIES[q.entity].table} SET version = ? WHERE id = ?`, [r.version, q.record_id]],
+          // What we just pushed is now the server copy, i.e. the base for any future conflict.
+          [`UPDATE ${ENTITIES[q.entity].table} SET version = ?, synced_data = ? WHERE id = ?`,
+            [r.version, JSON.stringify(stripMeta(rec)), q.record_id]],
           // Only clear the outbox if the record wasn't edited again while we were syncing.
           ['DELETE FROM outbox WHERE entity = ? AND record_id = ? AND op_id = ?', [q.entity, q.record_id, q.op_id]],
         ]);
       } else if (r.status === 'conflict') {
-        await resolveConflict(q.entity, rec, r.server);
+        await resolveConflict(q.entity, rec, r.server, base);
       } else {
         await query('UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE entity = ? AND record_id = ?', [r.error, q.entity, q.record_id]);
       }

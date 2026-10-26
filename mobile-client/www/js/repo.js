@@ -11,13 +11,17 @@ export function rowToRecord(row) {
 }
 
 // Builds the upsert (+ optional outbox) statements so a record and its pending-sync marker are saved atomically.
+// Local edits keep synced_data (the last server copy); records coming from the server also update it.
 export function upsertStatements(entity, record, { queue = true } = {}) {
   const { table, columns } = ENTITIES[entity];
   const data = stripMeta(record);
-  const cols = ['id', ...columns.map(([c]) => c), 'data', 'updated_at', 'version', 'deleted_at'];
-  const vals = [record.id, ...columns.map(([, f]) => data[f] ?? null), JSON.stringify(data),
-    record.updatedAt, record.version || 0, record.deletedAt || null];
-  const stmts = [[`INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`, vals]];
+  const json = JSON.stringify(data);
+  const cols = ['id', ...columns.map(([c]) => c), 'data', 'updated_at', 'version', 'deleted_at', ...(queue ? [] : ['synced_data'])];
+  const vals = [record.id, ...columns.map(([, f]) => data[f] ?? null), json,
+    record.updatedAt, record.version || 0, record.deletedAt || null, ...(queue ? [] : [json])];
+  const updates = cols.filter((c) => c !== 'id').map((c) => `${c} = excluded.${c}`).join(', ');
+  const stmts = [[`INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})
+    ON CONFLICT(id) DO UPDATE SET ${updates}`, vals]];
   if (queue) {
     stmts.push(['INSERT OR REPLACE INTO outbox (entity, record_id, op, op_id, queued_at, attempts) VALUES (?, ?, ?, ?, ?, 0)',
       [entity, record.id, record.deletedAt ? 'delete' : 'upsert', uuid(), now()]]);

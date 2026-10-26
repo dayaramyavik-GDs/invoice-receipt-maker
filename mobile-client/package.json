@@ -13,7 +13,7 @@
   "keywords": [
     "ecosystem:cordova"
   ],
-  "author": "Your Name",
+  "author": "dayaramyavik-GDs",
   "license": "UNLICENSED",
   "devDependencies": {
     "cordova-android": "^15.1.0",
