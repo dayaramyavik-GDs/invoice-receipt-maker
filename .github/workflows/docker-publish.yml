@@ -19,7 +19,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           # GHCR names must be lowercase (the GitHub account is dayaramyavik-GDs)
           images: ghcr.io/dayaramyavik-gds/invoice-receipt-maker-api
