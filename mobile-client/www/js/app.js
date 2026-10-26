@@ -1,4 +1,5 @@
-import { openDb, migrate, query, getMeta } from './db.js';
+import { openDb, migrate, query, getMeta, setMeta } from './db.js';
+import { cleanDeviceCode, findDuplicateNumbers, numberPrefix } from './numbering.js';
 import * as repo from './repo.js';
 import { documentTotals, formatMoney, toPence, addDays, localToday, deriveStatus } from './money.js';
 import { resizeImage } from './image.js';
@@ -74,7 +75,13 @@ async function renderDashboard() {
   const [m] = await query(`SELECT COALESCE(SUM(paid_pence), 0) AS paid FROM documents
     WHERE deleted_at IS NULL AND status = 'issued' AND issue_date >= ?`, [`${today.slice(0, 7)}-01`]);
   const recent = await repo.list('document', { limit: 5 });
+  const duplicates = findDuplicateNumbers(await query('SELECT type, number, status, deleted_at AS deletedAt FROM documents WHERE number IS NOT NULL'));
   view.innerHTML = `
+    ${duplicates.length ? `<a class="card banner-conflict" href="#/settings">
+      <strong>Duplicate number${duplicates.length > 1 ? 's' : ''}: ${duplicates.map(esc).join(', ')}</strong><br>
+      Two phones issued the same number while offline. Void one copy and issue it again to get a new number,
+      and give each phone its own device code in Settings to stop this happening again.
+    </a>` : ''}
     <div class="stats">
       <a class="card stat" href="#/documents?filter=unpaid">Outstanding<strong>${formatMoney(s.outstanding)}</strong></a>
       <a class="card stat" href="#/documents?filter=overdue">Overdue (${s.overdue_count})<strong class="error">${formatMoney(s.overdue)}</strong></a>
@@ -446,6 +453,7 @@ async function renderItemForm(id) {
 // ---------- Settings / onboarding ----------
 async function renderSettings(onboarding) {
   const p = await repo.getProfile();
+  const deviceCode = (await getMeta('device_code')) || '';
   const loggedIn = await isLoggedIn();
   setTitle(onboarding ? 'Welcome' : 'Settings');
   view.innerHTML = `
@@ -469,6 +477,9 @@ async function renderSettings(onboarding) {
         <label>Receipt prefix <input name="receiptPrefix" maxlength="10" value="${esc(p.receiptPrefix)}"></label>
       </div>
       <label>Brand colour <input name="brandColour" type="color" value="${esc(p.brandColour || '#2163ba')}"></label>
+      ${onboarding ? '' : `<label>Device code (only if you invoice from more than one phone)
+        <input name="deviceCode" maxlength="3" autocapitalize="characters" placeholder="e.g. A" value="${esc(deviceCode)}">
+        <small class="muted">Gives this phone its own numbers, e.g. ${esc(numberPrefix(p.invoicePrefix || 'INV-', deviceCode || 'A'))}0001, so two phones can't pick the same number offline. Stored on this phone only.</small></label>`}
       <p id="form-error" class="error" role="alert" hidden></p>
       <button type="submit">${onboarding ? 'Start invoicing' : 'Save settings'}</button>
     </form>
@@ -512,6 +523,7 @@ async function renderSettings(onboarding) {
       defaultTaxRatePercent: Math.min(100, Math.max(0, Number(fd.get('defaultTaxRatePercent')) || 0)),
       paymentTermsDays: Math.min(365, Math.max(0, parseInt(fd.get('paymentTermsDays'), 10) || 0)),
     });
+    if (!onboarding) await setMeta('device_code', cleanDeviceCode(fd.get('deviceCode')) || null);   // per phone, never synced
     toast('Settings saved');
     go('#/dashboard');
   });
@@ -563,7 +575,8 @@ function renderLogin() {
       showFormError(form, ['Enter a valid email and a password of at least 10 characters.']);
       return;
     }
-    if (!navigator.onLine) { showFormError(form, ['You need an internet connection to sign in. Your data is safe on this phone.']); return; }
+    // No navigator.onLine check: some WebViews report offline wrongly. A real failure shows
+    // "Could not reach the server. Your data is safe on this phone." from api.js.
     const buttons = form.querySelectorAll('button');
     buttons.forEach((b) => { b.disabled = true; });
     try {

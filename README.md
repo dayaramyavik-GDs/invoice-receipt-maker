@@ -9,7 +9,8 @@ branded invoices and receipts, track what is paid and unpaid, and share PDFs —
 - Business profile with logo, VAT number, payment instructions, default tax and payment terms
 - Customers and a saved items/services catalogue
 - Invoices and receipts with itemised lines, quantities, prices and tax — totals calculated in integer pence
-- Automatic numbering (`INV-0001`, `REC-0001`) assigned when a document is issued
+- Automatic numbering (`INV-0001`, `REC-0001`) assigned when a document is issued; an optional per-phone device
+  code (`INV-A-0001`) keeps several phones from clashing offline
 - Statuses: draft, unpaid, part-paid, overdue, paid, void; mark as paid / record part payments
 - Branded A4 PDF generated on the phone and shared through the Android share sheet
 - Dashboard (outstanding, overdue, received this month), filters and search
@@ -127,7 +128,7 @@ Only the `.env.example` files are committed.
 
 ```powershell
 cd backend; npm run lint; npm test        # 11 API tests (in-memory MongoDB)
-cd mobile-client; npm test                # 14 tests: money/tax/dates/statuses and sync merging
+cd mobile-client; npm test                # 20 tests: money, tax, dates, statuses, sync merging, numbering
 ```
 
 Manual offline/sync test plan and results: [docs/test-plan.md](docs/test-plan.md). Requests for the VS Code

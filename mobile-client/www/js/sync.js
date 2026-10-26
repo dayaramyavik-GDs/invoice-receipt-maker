@@ -7,6 +7,7 @@ import { CONFIG } from './config.js';
 
 const PUSH_BATCH = 50;
 const MAX_ATTEMPTS = 5;
+const OFFLINE_RECHECK_MS = 30 * 1000;
 let running = false;
 let timer = null;
 let retryDelay = 5000;
@@ -29,7 +30,9 @@ export async function syncNow() {
   const reachable = await canReachServer();
   if (!reachable && !navigator.onLine) {
     running = false;
-    emit({ state: 'offline', pending: await pendingCount() });   // the 'online' event triggers the next attempt
+    emit({ state: 'offline', pending: await pendingCount() });
+    // Don't rely only on the 'online' event – some devices never send it – so check again shortly.
+    scheduleSync(OFFLINE_RECHECK_MS);
     return;
   }
   emit({ state: 'syncing' });

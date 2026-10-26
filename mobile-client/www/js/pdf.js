@@ -32,7 +32,8 @@ export function buildPdf(doc, profile) {
 
   if (profile.logoDataUrl) {
     const { width, height } = pdf.getImageProperties(profile.logoDataUrl);
-    pdf.addImage(profile.logoDataUrl, 'PNG', PAGE.m, y, Math.min(60, (width / height) * 25), 25);
+    // 'FAST' compression keeps the logo from making every PDF ~300 KB.
+    pdf.addImage(profile.logoDataUrl, 'PNG', PAGE.m, y, Math.min(60, (width / height) * 25), 25, 'logo', 'FAST');
   }
   pdf.setFont('helvetica', 'bold').setFontSize(22).setTextColor(...brand)
     .text(doc.type === 'receipt' ? 'RECEIPT' : 'INVOICE', right, y + 8, { align: 'right' });

@@ -1,4 +1,5 @@
-import { query, batch, ENTITIES } from './db.js';
+import { query, batch, getMeta, ENTITIES } from './db.js';
+import { numberPrefix, nextNumber } from './numbering.js';
 
 export const PROFILE_ID = 'profile';
 export const uuid = () => crypto.randomUUID();
@@ -68,10 +69,11 @@ export async function getProfile() {
 }
 
 // Next number = highest existing + 1, so it stays correct after pulling data from another device.
+// This phone's device code (Settings, stored only on this phone) gives it its own sequence.
 export async function nextDocumentNumber(type, prefix) {
-  const rows = await query('SELECT number FROM documents WHERE type = ? AND number LIKE ?', [type, `${prefix}%`]);
-  const max = rows.reduce((m, r) => Math.max(m, Number(r.number.slice(prefix.length)) || 0), 0);
-  return `${prefix}${String(max + 1).padStart(4, '0')}`;
+  const fullPrefix = numberPrefix(prefix, await getMeta('device_code'));
+  const rows = await query('SELECT number FROM documents WHERE type = ? AND number LIKE ?', [type, `${fullPrefix}%`]);
+  return nextNumber(rows.map((r) => r.number), fullPrefix);
 }
 
 // Everything on this phone as one JSON file (Settings → Export backup).

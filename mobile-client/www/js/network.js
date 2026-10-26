@@ -26,11 +26,15 @@ export async function fetchWithTimeout(url, options = {}, ms = CONFIG.REQUEST_TI
   }
 }
 
-// "Connected to Wi-Fi" is not the same as "can reach our server".
+// "Connected to Wi-Fi" is not the same as "can reach our server" – and the reverse also happens:
+// some Android WebViews keep reporting offline after airplane mode ends. So we always ask the server,
+// and a successful answer also corrects our own online flag.
 export async function canReachServer() {
-  if (!navigator.onLine || !CONFIG.API_ORIGIN) return false;
+  if (!CONFIG.API_ORIGIN) return false;
   try {
-    return (await fetchWithTimeout(`${CONFIG.API_ORIGIN}/health/live`, {}, 5000)).ok;
+    const ok = (await fetchWithTimeout(`${CONFIG.API_ORIGIN}/health/live`, {}, 5000)).ok;
+    if (ok) set(true);
+    return ok;
   } catch {
     return false;
   }

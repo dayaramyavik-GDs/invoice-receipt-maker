@@ -79,10 +79,19 @@ another device changed the record first, `www/js/merge.js` compares local, serve
 - Payments are always combined by id, and totals are recalculated from the merged lines and payments.
 - Records synced before schema v2 have no base yet, so they fall back to newest-wins until their next sync.
 
-**Known limitations:**
-- Device clocks decide last-write-wins.
-- Two phones issuing invoices offline at the same time can pick the same number. Use a per-device prefix if
-  that matters.
+**Known limitation:** device clocks decide which edit is newest.
+
+## Numbering across devices
+
+Numbers are the highest existing number + 1 (`www/js/numbering.js`). Two phones issuing invoices while both
+offline can therefore pick the same number. To prevent this, each phone can have a **device code** in Settings
+(stored only on that phone, never synced), giving it its own sequence: `INV-A-0001`, `INV-B-0001`. If a
+clash happens anyway, the dashboard names the duplicated number; voiding one copy and issuing it again clears it.
+
+## Online detection
+
+Android's `navigator.onLine` and the network plugin can stay "offline" after airplane mode ends. Sync therefore
+never trusts them alone: it asks the server (`/health/live`) directly, and while offline it re-checks every 30 s.
 
 ## Data-loss protection
 

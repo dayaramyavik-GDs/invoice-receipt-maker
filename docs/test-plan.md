@@ -32,6 +32,9 @@ Devices used: Pixel 9 Pro Fold (Android 17, current WebView) and an Android 15 e
 | OF-11 | Void an issued invoice via the native Android confirm dialog → locked, no Save, still shareable, moves to the "void" filter, leaves the outstanding total | ✅ |
 | OF-12 | Delete a customer who has invoices → invoices keep the customer's name and address; editing such an invoice shows "(deleted customer)" and saves | ✅ |
 | OF-13 | Delete a saved item | ✅ |
+| OF-14 | Logo from the phone's gallery: Android photo picker opens, chosen image is resized (400×200, 22 KB), saved and printed on the PDF | ✅ |
+| OF-15 | Export backup: share sheet opens with `invoice-maker-backup-<date>.json`; file holds profile (with logo), customers, items and all documents incl. deleted/void | ✅ |
+| OF-16 | PDF with logo is 23 KB (was 319 KB before image compression) | ✅ |
 
 Found and fixed on the real devices:
 - a blank band under the status bar (safe-area inset applied twice)
@@ -41,6 +44,10 @@ Found and fixed on the real devices:
 - newer WebViews report a safe-area inset although Cordova already offsets the WebView, so CSS safe-area
   padding was removed
 - editing an invoice whose customer had been deleted showed an empty customer and could not be saved
+- after airplane mode, Android's WebView and the network plugin kept reporting "offline" although Wi-Fi was back,
+  so the app never synced; sync now checks the server directly and re-checks every 30 s while offline
+- two phones offline could issue the same invoice number; now prevented by device codes and detected on the
+  dashboard
 
 ## Sync between two real devices (phone + emulator, API in Docker via `adb reverse`)
 
@@ -53,6 +60,10 @@ Found and fixed on the real devices:
 | SY-5 | **Offline conflict:** emulator offline edits notes, phone records £30 payment → both kept on both devices (v3), no false conflict | ✅ |
 | SY-6 | Same field edited on both → newest wins, other copy offered on the review screen (unit tested) | ✅ |
 | SY-7 | API down → "Couldn't sync (1 waiting)" with retries; recovers automatically (browser run) | ✅ |
+| SY-8 | Both devices offline with no device code → both issue `INV-0006`; after sync both dashboards warn "Duplicate number: INV-0006" | ✅ |
+| SY-9 | Device codes A and B, both offline → `INV-A-0001` and `INV-B-0001`, no clash | ✅ |
+| SY-10 | Voiding one copy of the duplicate clears the warning on both devices | ✅ |
+| SY-11 | After airplane mode the phone re-synced by itself within 15 s (sync no longer depends on Android's online flag) | ✅ |
 
 Found and fixed: Android blocked plain HTTP to the local API on the emulator (`ERR_CLEARTEXT_NOT_PERMITTED`).
 Development builds now get a localhost-only exception. A second phone had no way to sign in from the setup screen.
