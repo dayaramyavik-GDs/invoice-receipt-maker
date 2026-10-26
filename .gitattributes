@@ -1,0 +1,5 @@
+# Keep LF line endings in the repo so Dockerfiles, shell scripts and YAML work in Linux containers and CI.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.wasm binary

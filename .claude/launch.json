@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mobile-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["mobile-client/dev/serve.mjs"],
+      "env": { "API_ORIGIN": "http://localhost:3001" },
+      "port": 8000
+    }
+  ]
+}

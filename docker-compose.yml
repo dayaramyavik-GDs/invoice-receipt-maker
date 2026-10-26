@@ -10,7 +10,7 @@ services:
       # Overrides the value in backend/.env so the API talks to the "mongo" container
       MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/invoice_maker?authSource=admin
     ports:
-      - "3000:3000"
+      - "${API_HOST_PORT:-3000}:3000"
     depends_on:
       mongo:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
     volumes:
       - mongo-data:/data/db
     ports:
-      - "127.0.0.1:27017:27017"   # reachable only from your PC (e.g. MongoDB Compass)
+      - "127.0.0.1:${MONGO_HOST_PORT:-27017}:27017"   # reachable only from your PC (e.g. MongoDB Compass)
     networks: [backend]
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
