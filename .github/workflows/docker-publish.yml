@@ -26,7 +26,9 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Only builds of main move "latest"; release-tag builds (v*) must not, or a re-run of an old
+            # tag would make "latest" point at an old version.
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
       - uses: docker/build-push-action@v7
         with:
           context: ./backend
